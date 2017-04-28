@@ -3,14 +3,19 @@ import static org.junit.Assert.*;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 import org.junit.Test;
 
 import junit.framework.Assert;
 
 public class DateTest {
-
+	@Test
+	public void Test(){
+		List<String> aList = Arrays.asList("zhangyu.chen.o","dongshun");
+	}
 	/**
 	 * 测试不同时区的时间比较
 	 * @throws ParseException
