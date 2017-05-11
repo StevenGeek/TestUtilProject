@@ -7,5 +7,6 @@
 	<classpathentry kind="lib" path="lib/jackson-core-2.8.7.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.8.7.jar"/>
 	<classpathentry kind="lib" path="lib/spring-core-4.3.7.RELEASE.jar"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.41.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
