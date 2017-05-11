@@ -1,6 +1,6 @@
 package com.steven.util;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
+
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
