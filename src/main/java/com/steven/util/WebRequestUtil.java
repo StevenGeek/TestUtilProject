@@ -1,10 +1,8 @@
 package com.steven.util;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -15,15 +13,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.springframework.util.StringUtils;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+/**
+ * zhangyu.chen.o
+ */
 public class WebRequestUtil {
     private static HttpURLConnection c_HttpURLConnection;
-    
+    private final static int READ_TIME_OUT = 30000;
+    private final static int CONNECTIONG_TIME_OUT = 10000;
     /**
      * 发送webGet请求
      * 
@@ -35,7 +31,15 @@ public class WebRequestUtil {
     public static String get(String m_Url, Map<String, String> p_Params, Map<String, String> p_headers) throws IOException {
         return readResponse(getAsInputStream(m_Url, p_Params,  p_headers));
     }
-    
+
+    /**
+     *发送get请求，返回Inputstream
+     * @param m_Url 请求地址
+     * @param p_Params 请求参数Map（？&形式加入URL）
+     * @param p_headers 请求头Map
+     * @return Inputstream
+     * @throws IOException
+     */
     public static InputStream getAsInputStream(String m_Url, Map<String, String> p_Params, Map<String, String> p_headers) throws IOException {
         m_Url = setParams(m_Url, p_Params);
         URL m_UrlUtil = new URL(m_Url);
@@ -43,6 +47,8 @@ public class WebRequestUtil {
         setConnectionProperty();
         c_HttpURLConnection.setRequestMethod("GET");
         c_HttpURLConnection.setRequestProperty("Content-Type", "application/json");
+        c_HttpURLConnection.setReadTimeout(READ_TIME_OUT);
+        c_HttpURLConnection.setConnectTimeout(CONNECTIONG_TIME_OUT);
         for (Map.Entry<String, String> entry : p_headers.entrySet()) {
 			c_HttpURLConnection.setRequestProperty(entry.getKey(), entry.getValue());
 		}
@@ -67,6 +73,8 @@ public class WebRequestUtil {
         c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
         setConnectionProperty();
         c_HttpURLConnection.setRequestMethod("GET");
+        c_HttpURLConnection.setReadTimeout(READ_TIME_OUT);
+        c_HttpURLConnection.setConnectTimeout(CONNECTIONG_TIME_OUT);
         c_HttpURLConnection.setRequestProperty("Content-Type", "application/json");
         return c_HttpURLConnection.getInputStream();
     }
@@ -81,13 +89,16 @@ public class WebRequestUtil {
      */
     public static <T> String get(String m_Url, T p_Params)
             throws IOException, NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        InputStream m_InputStream = null;
         m_Url = setParams(m_Url, p_Params);
         URL m_UrlUtil = new URL(m_Url);
         c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
         setConnectionProperty();
         c_HttpURLConnection.setRequestMethod("GET");
+        c_HttpURLConnection.setReadTimeout(READ_TIME_OUT);
+        c_HttpURLConnection.setConnectTimeout(CONNECTIONG_TIME_OUT);
         c_HttpURLConnection.setRequestProperty("Content-Type", "application/json");
-        InputStream m_InputStream = c_HttpURLConnection.getInputStream();
+        m_InputStream = c_HttpURLConnection.getInputStream();
         return readResponse(m_InputStream);
     }
 
@@ -100,18 +111,29 @@ public class WebRequestUtil {
      * @throws IOException
      */
     public static String post(String m_Url, Map<String, String> p_Params, String p_Request) throws IOException {
-        m_Url = setParams(m_Url, p_Params);
-        URL m_UrlUtil = new URL(m_Url);
-        c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
-        setConnectionProperty();
-        c_HttpURLConnection.setRequestMethod("POST");
-        c_HttpURLConnection.setRequestProperty("Content-Type", "application/json");
-        OutputStream m_RequestStream = c_HttpURLConnection.getOutputStream();
-        m_RequestStream.write(p_Request.getBytes());
-        m_RequestStream.flush();
-        m_RequestStream.close();
-        InputStream m_ResponseStream = c_HttpURLConnection.getInputStream();
-        return readResponse(m_ResponseStream);
+
+        OutputStream m_RequestStream = null;
+        InputStream m_ResponseStream = null;
+        try {
+            m_Url = setParams(m_Url, p_Params);
+            URL m_UrlUtil = new URL(m_Url);
+            c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
+            setConnectionProperty();
+            c_HttpURLConnection.setRequestMethod("POST");
+            c_HttpURLConnection.setReadTimeout(READ_TIME_OUT);
+            c_HttpURLConnection.setConnectTimeout(CONNECTIONG_TIME_OUT);
+            c_HttpURLConnection.setRequestProperty("Content-Type", "application/json");
+            m_RequestStream = c_HttpURLConnection.getOutputStream();
+            m_ResponseStream = c_HttpURLConnection.getInputStream();
+            m_RequestStream.write(p_Request.getBytes("UTF-8"));
+            return readResponse(m_ResponseStream);
+        }
+        finally {
+            if(m_RequestStream != null) {
+                m_RequestStream.flush();
+                m_RequestStream.close();
+            }
+        }
     }
 
     /**
@@ -123,18 +145,28 @@ public class WebRequestUtil {
      * @throws IOException
      */
     public static String post(String m_Url, Map<String, String> p_Params, String p_Request, String contentType) throws IOException {
-        m_Url = setParams(m_Url, p_Params);
-        URL m_UrlUtil = new URL(m_Url);
-        c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
-        setConnectionProperty();
-        c_HttpURLConnection.setRequestMethod("POST");
-        c_HttpURLConnection.setRequestProperty("Content-Type", contentType);
-        OutputStream m_RequestStream = c_HttpURLConnection.getOutputStream();
-        m_RequestStream.write(p_Request.getBytes());
-        m_RequestStream.flush();
-        m_RequestStream.close();
-        InputStream m_ResponseStream = c_HttpURLConnection.getInputStream();
-        return readResponse(m_ResponseStream);
+        OutputStream m_RequestStream = null;
+        try {
+            m_Url = setParams(m_Url, p_Params);
+            URL m_UrlUtil = new URL(m_Url);
+            c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
+            setConnectionProperty();
+            c_HttpURLConnection.setRequestMethod("POST");
+            c_HttpURLConnection.setReadTimeout(READ_TIME_OUT);
+            c_HttpURLConnection.setConnectTimeout(CONNECTIONG_TIME_OUT);
+            c_HttpURLConnection.setRequestProperty("Content-Type", contentType);
+            m_RequestStream = c_HttpURLConnection.getOutputStream();
+            m_RequestStream.write(p_Request.getBytes());
+            m_RequestStream.flush();
+            m_RequestStream.close();
+            InputStream m_ResponseStream = c_HttpURLConnection.getInputStream();
+            return readResponse(m_ResponseStream);
+        }
+        finally {
+            if(m_RequestStream!=null){
+                m_RequestStream.close();
+            }
+        }
     }
 
     /**
@@ -146,19 +178,29 @@ public class WebRequestUtil {
      * @throws IOException
      */
     public static String post(String m_Url, Map<String, String> p_Params, Map p_Request, String contentType) throws IOException {
-        m_Url = setParams(m_Url, p_Params);
-        URL m_UrlUtil = new URL(m_Url);
-        c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
-        setConnectionProperty();
-        c_HttpURLConnection.setRequestMethod("POST");
-        c_HttpURLConnection.setRequestProperty("Content-Type", contentType);
-        OutputStream m_RequestStream = c_HttpURLConnection.getOutputStream();
-        String bodyParam = formatBodyMapParams(p_Request);
-        m_RequestStream.write(bodyParam.getBytes("UTF-8"));
-        m_RequestStream.flush();
-        m_RequestStream.close();
-        InputStream m_ResponseStream = c_HttpURLConnection.getInputStream();
-        return readResponse(m_ResponseStream);
+        OutputStream m_RequestStream = null;
+        try {
+            m_Url = setParams(m_Url, p_Params);
+            URL m_UrlUtil = new URL(m_Url);
+            c_HttpURLConnection = (HttpURLConnection) m_UrlUtil.openConnection();
+            setConnectionProperty();
+            c_HttpURLConnection.setRequestMethod("POST");
+            c_HttpURLConnection.setReadTimeout(READ_TIME_OUT);
+            c_HttpURLConnection.setConnectTimeout(CONNECTIONG_TIME_OUT);
+            c_HttpURLConnection.setRequestProperty("Content-Type", contentType);
+            m_RequestStream = c_HttpURLConnection.getOutputStream();
+            String bodyParam = formatBodyMapParams(p_Request);
+            m_RequestStream.write(bodyParam.getBytes("UTF-8"));
+            m_RequestStream.flush();
+            m_RequestStream.close();
+            InputStream m_ResponseStream = c_HttpURLConnection.getInputStream();
+            return readResponse(m_ResponseStream);
+        }
+        finally {
+            if(m_RequestStream!=null){
+                m_RequestStream.close();
+            }
+        }
     }
 
     /**
@@ -168,21 +210,9 @@ public class WebRequestUtil {
      * @param p_Clazz 实体类类型
      * @return 实体类
      */
-    public static <T> T convertJson2Obj(String p_Json, Class<T> p_Clazz) {
+    public static <T> T convertJson2Obj(String p_Json, Class<T> p_Clazz) throws IOException {
         ObjectMapper m_Mapper = new ObjectMapper();
-        try {
-            return m_Mapper.readValue(p_Json, p_Clazz);
-        } catch (JsonParseException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (JsonMappingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        return null;
+        return m_Mapper.readValue(p_Json, p_Clazz);
     }
 
     /**
@@ -195,20 +225,30 @@ public class WebRequestUtil {
     }
 
     /**
-     * 读取响应流转成String
+     * 读取响应流转成String 默认UTF-8
      * 
      * @param p_InputStream 响应流
      * @return 响应String
      * @throws IOException
      */
     private static String readResponse(InputStream p_InputStream) throws IOException {
-        BufferedReader m_BufferedReader = new BufferedReader(new InputStreamReader(p_InputStream, "UTF-8"));
-        String m_ReadLine = null;
-        StringBuilder m_StringBuilder = new StringBuilder();
-        while ((m_ReadLine = m_BufferedReader.readLine()) != null) {
-            m_StringBuilder.append(m_ReadLine);
+        try {
+            if(null == p_InputStream){
+                return null;
+            }
+            BufferedReader m_BufferedReader = new BufferedReader(new InputStreamReader(p_InputStream, "UTF-8"));
+            String m_ReadLine = null;
+            StringBuilder m_StringBuilder = new StringBuilder();
+            while ((m_ReadLine = m_BufferedReader.readLine()) != null) {
+                m_StringBuilder.append(m_ReadLine);
+            }
+            return m_StringBuilder.toString();
         }
-        return m_StringBuilder.toString();
+        finally {
+            if(p_InputStream != null){
+                p_InputStream.close();
+            }
+        }
     }
 
     /**
@@ -234,7 +274,6 @@ public class WebRequestUtil {
     /**
      * 设置body键值对请求参数
      *
-     * @param m_Url URL
      * @param p_Params 参数Map
      * @return
      */
